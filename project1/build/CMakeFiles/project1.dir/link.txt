@@ -1,0 +1,1 @@
+/usr/bin/c++     CMakeFiles/project1.dir/src/main.cpp.o CMakeFiles/project1.dir/src/hero.cpp.o CMakeFiles/project1.dir/src/actor.cpp.o CMakeFiles/project1.dir/src/actor_plusarmor.cpp.o CMakeFiles/project1.dir/src/weapon.cpp.o CMakeFiles/project1.dir/src/thegame.cpp.o  -o project1 
