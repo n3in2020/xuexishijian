@@ -21,6 +21,14 @@ int main()
                         char buffer[1024];
                         sprintf(buffer, "./test/tp_file_%d", i);
                         ofs.open(buffer);
+                        if (!ofs.is_open())
+                        {
+                            char error[1024];
+                            sprintf(error, "Cannot open file %s", buffer);
+                            perror(error);
+                            ofs.close();
+                            std::terminate();
+                        }
                         ofs << "hello world" << std::endl;
                         ofs.close();
                     });
@@ -44,6 +52,14 @@ int main()
                 char buffer[1024];
                 sprintf(buffer, "./test/st_file_%d", i);
                 ofs.open(buffer);
+                if (!ofs.is_open())
+                {
+                    char error[1024];
+                    sprintf(error, "Cannot open file %s", buffer);
+                    perror(error);
+                    ofs.close();
+                    std::terminate();
+                }
                 ofs << "hello world" << std::endl;
                 ofs.close();
             }
