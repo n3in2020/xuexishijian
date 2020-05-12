@@ -1,73 +1,116 @@
-#include <iostream>
-#include <thread>
 #include "thread_pool.h"
-#include <chrono>
+#include <iostream>
+#include <unistd.h>
 #include <fstream>
-
-int main()
-{   // 测试的任务是创建文件并输出“hello world”， 观察执行时间
-    const unsigned long CNT = 10000;
+#include <random>
+#include <algorithm>
+auto IO_bound_job(int N)
+{
+    ThreadPool tp(N);
+    const unsigned jobs = 10000;
+    std::atomic<int> n{0};
+    system("rm -rf testdir");
+    system("mkdir testdir");
+    auto start = std::chrono::high_resolution_clock::now();
     {
-        std::cout << "[Thread pool]" << std::endl;
-        ThreadPool tp;
-        std::cout << "[start]" << std::endl;
-        auto start = std::chrono::high_resolution_clock::now();
+        for (int i = 0; i < jobs; ++i)
         {
-            for (int i = 0; i < CNT; ++i)
-            {
-                tp.submit(
-                    [&i] {
-                        std::ofstream ofs;
-                        char buffer[1024];
-                        sprintf(buffer, "./test/tp_file_%d", i);
-                        ofs.open(buffer);
-                        if (!ofs.is_open())
-                        {
-                            char error[1024];
-                            sprintf(error, "Cannot open file %s", buffer);
-                            perror(error);
-                            ofs.close();
-                            std::terminate();
-                        }
-                        ofs << "hello world" << std::endl;
-                        ofs.close();
-                    });
-            }
-        }
-        auto end = std::chrono::high_resolution_clock::now();
-        std::cout << "[end]" << std::endl;
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-        std::cout << "duration:" << duration.count() << "ms" << std::endl;
-    }
-    std::cout << std::endl;
-    {
-        std::cout << "[single thread]" << std::endl;
-        ThreadPool tp;
-        std::cout << "[start]" << std::endl;
-        auto start = std::chrono::high_resolution_clock::now();
-        {
-            for (int i = 0; i < CNT; ++i)
-            {
+            tp.submit([&] {
                 std::ofstream ofs;
                 char buffer[1024];
-                sprintf(buffer, "./test/st_file_%d", i);
-                ofs.open(buffer);
-                if (!ofs.is_open())
+                sprintf(buffer, "testdir/%d", ++n);
+                ofs.open(buffer, std::ios_base::out | std::ios_base::trunc);
+                if (ofs.is_open())
                 {
-                    char error[1024];
-                    sprintf(error, "Cannot open file %s", buffer);
-                    perror(error);
+                    for (int j = 0; j < 1000; ++j)
+                    {
+                        ofs << "hello world" << std::endl;
+                    }
                     ofs.close();
-                    std::terminate();
                 }
-                ofs << "hello world" << std::endl;
-                ofs.close();
-            }
+                else
+                {
+                    perror("when open file");
+                }
+            });
         }
-        auto end = std::chrono::high_resolution_clock::now();
+        tp.waitFinished();
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    return duration;
+}
+
+void benchmark_IO_bound(int N)
+{
+    const int TEST_SIZE = 5;
+    auto total = std::chrono::milliseconds(0);
+
+    std::cout << "[IO bound benchmark]" << std::endl;
+    std::cout << "[threads = " << N << "]" << std::endl;
+    for (int i = 0; i < TEST_SIZE; ++i)
+    {
+        std::cout << "[job " << i << " start]" << std::endl;
+        auto duration = IO_bound_job(N);
+        total += duration;
         std::cout << "[end]" << std::endl;
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-        std::cout << "duration:" << duration.count() << "ms" << std::endl;
+        std::cout << "[duration = " << duration.count() << "ms]" << std::endl;
+    }
+    auto avg = total / TEST_SIZE;
+    std::cout << "\n\n[avg = " << avg.count() << "ms]" << std::endl;
+}
+
+auto CPU_bound_job(int N)
+{
+    ThreadPool tp(N);
+    const unsigned jobs = 1000;
+    auto start = std::chrono::high_resolution_clock::now();
+    {
+        for (int i = 0; i < jobs; ++i)
+        {
+            tp.submit([&] {
+                std::random_device rd;
+                std::mt19937 mt(rd());
+                std::vector<int> data(10000);
+                std::generate_n(std::back_inserter(data), data.capacity(), [&] { return mt(); });
+                std::sort(data.begin(), data.end());
+            });
+        }
+        tp.waitFinished();
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    return duration;
+}
+
+void benchmark_CPU_bound(int N)
+{
+    const int TEST_SIZE = 5;
+    auto total = std::chrono::milliseconds(0);
+    std::cout << "[CPU bound benchmark]" << std::endl;
+    std::cout << "[threads = " << N << "]" << std::endl;
+    for (int i = 0; i < TEST_SIZE; ++i)
+    {
+        std::cout << "[job " << i << " start]" << std::endl;
+        auto duration = CPU_bound_job(N);
+        total += duration;
+        std::cout << "[end]" << std::endl;
+        std::cout << "[duration = " << duration.count() << "ms]" << std::endl;
+    }
+    auto avg = total / TEST_SIZE;
+    std::cout << "\n\n[avg = " << avg.count() << "ms]" << std::endl;
+}
+
+int main(int argc, char **argv)
+{
+    if (argc > 1)
+    {
+        // benchmark_IO_bound(atoi(argv[1]));
+        benchmark_CPU_bound(atoi(argv[1]));
+    }
+    else
+    {
+        printf("usage: %s n\n", argv[0]);
     }
     return 0;
 }
