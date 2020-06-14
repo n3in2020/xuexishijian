@@ -17,12 +17,14 @@ const int BACKLOG = 5;
 class Server
 {
 public:
-    Server(short port_ = 50000) : port(port_), tp{}
+    Server(short port_ = 50000) : port(port_), tp{1}
     {
         base = event_base_new();
+        done = false;
     };
     ~Server()
     {
+        done = true;
         evconnlistener_free(listener);
         event_base_free(base);
     }
@@ -45,7 +47,12 @@ void Server::setupListener()
     sin.sin_family = AF_INET;
     sin.sin_port = htons(port);
     sin.sin_addr.s_addr = INADDR_ANY;
-    listener = evconnlistener_new_bind(base, accept_conn, &q, LEV_OPT_CLOSE_ON_FREE & LEV_OPT_REUSEABLE, 5, (struct sockaddr *)&sin, sizeof(sin));
+    listener = evconnlistener_new_bind(base, accept_conn_cb, &q, LEV_OPT_CLOSE_ON_FREE & LEV_OPT_REUSEABLE, 5, (struct sockaddr *)&sin, sizeof(sin));
+    if(!listener)
+    {
+        perror("when listen");
+        exit(EXIT_FAILURE);
+    }
 }
 
 void Server::run()
@@ -63,17 +70,28 @@ void Server::run()
                 cli.setBuffers(bev);
                 bufferevent_setcb(bev, read_cb, NULL, event_cb, &cli);
                 bufferevent_enable(bev, EV_READ | EV_WRITE);
+                event_base_dispatch(base);
                 bufferevent_free(bev);
             }
             event_base_free(base);
         });
     }
+    event_base_dispatch(base);
 }
 
-void accept_conn(struct evconnlistener *listener, evutil_socket_t fd, struct sockaddr *sin, int socklen, void *arg)
+void accept_conn_cb(struct evconnlistener *listener, evutil_socket_t fd, struct sockaddr *sin, int socklen, void *arg)
 {
-    TSQueue<int> *q = (TSQueue<int>*)arg;
+    TSQueue<int> *q = (TSQueue<int> *)arg;
     q->push(fd);
 }
 
+void read_cb(struct bufferevent *bev, void *ctx)
+{
+    client *cli = (client *)ctx;
+    size_t read_out;
+    cli->send(cli->readln(&read_out));
+}
+void event_cb(struct bufferevent *bev, short what, void *ctx)
+{
+}
 #endif
