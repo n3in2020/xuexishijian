@@ -34,8 +34,6 @@ struct client
     }
     ~client()
     {
-        evbuffer_free(output_buffer);
-        evbuffer_free(input_buffer);
     }
     void setBuffers(bufferevent *bev)
     {
