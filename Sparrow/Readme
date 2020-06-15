@@ -7,3 +7,8 @@
    使用高精度时钟std::chrono::high_resolution_clock），以测试关键步骤耗时。
 6、加入key-value缓存，对相同的任务的结果进行缓存，考虑LRU策略。
 7、设计并实现一个简单的内存池模型：简单的多次分配，一次释放的策略。
+[build]
+mkdir build && cd build
+conan install ..
+cmake ..
+make
