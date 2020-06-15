@@ -2,12 +2,14 @@
 #define SERVER_HPP
 #include <arpa/inet.h>
 #include <memory.h>
+#include <memory>
 #include <event2/event.h>
 #include <event2/listener.h>
 #include <event2/bufferevent.h>
 #include "Threadsafe_Queue.hpp"
 #include "Threadpool.hpp"
 #include "Client.hpp"
+#include "JobFactory.hpp"
 
 void accept_conn_cb(struct evconnlistener *, evutil_socket_t, struct sockaddr *, int socklen, void *);
 void read_cb(struct bufferevent *bev, void *ctx);
@@ -88,8 +90,8 @@ void accept_conn_cb(struct evconnlistener *listener, evutil_socket_t fd, struct 
 void read_cb(struct bufferevent *bev, void *ctx)
 {
     client *cli = (client *)ctx;
-    size_t read_out;
-    cli->send(cli->readln(&read_out));
+    auto job = JobFactory::createJob(*cli);
+    job->work();
 }
 void event_cb(struct bufferevent *bev, short what, void *ctx)
 {
