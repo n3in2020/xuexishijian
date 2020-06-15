@@ -32,8 +32,11 @@ struct client
         info.in_bytes = 0;
         info.out_bytes = 0;
     }
+    client (const client&) = delete;
+    client& operator=(const client&) = delete;
     ~client()
     {
+        printf("[id] %d, [IP]: %s, [in_bytes] %d, [out_bytes] %d\n", info.id, info.IP_address.c_str(), info.in_bytes, info.out_bytes);
     }
     void setBuffers(bufferevent *bev)
     {
