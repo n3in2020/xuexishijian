@@ -8,3 +8,4 @@ find_package(Threads REQUIRED)
 
 add_executable(Sparrow src/main.cpp)
 target_link_libraries(Sparrow ${CONAN_LIBS})
+add_executable(client src/client.cpp)
