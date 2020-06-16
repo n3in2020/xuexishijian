@@ -19,7 +19,7 @@ const int BACKLOG = 5;
 class Server
 {
 public:
-    Server(short port_ = 50000) : port(port_), tp{1}
+    Server(short port_ = 50000) : port(port_), tp{}
     {
         base = event_base_new();
         done = false;
