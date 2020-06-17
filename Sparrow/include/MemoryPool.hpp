@@ -5,7 +5,7 @@ class MemoryPool
 {
 public:
     MemoryPool(size_t c, bool inc_ = false);
-    ~MemoryPool();
+    ~MemoryPool() { destroyPool(); };
     void *malloc(size_t size);
     void destroyPool();
     bool hasEnoughSpace(size_t size);
@@ -36,7 +36,7 @@ void *MemoryPool::malloc(size_t size)
     }
     else if (inc)
     {
-        if (expandPool)
+        if (expandPool())
             return malloc(size);
     }
     return nullptr;
@@ -68,8 +68,15 @@ bool MemoryPool::expandPool()
         p = (int *)p - (int *)pool + (int *)new_pool;
         void *temp = pool;
         pool = new_pool;
-        delete pool;
+        ::operator delete(temp);
         return true;
     }
+}
+
+void MemoryPool::destroyPool()
+{
+    ::operator delete(pool);
+    pool = nullptr;
+    p = nullptr;
 }
 #endif
