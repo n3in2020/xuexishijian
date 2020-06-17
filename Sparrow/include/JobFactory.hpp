@@ -5,20 +5,43 @@
 #include <errno.h>
 #include "Client.hpp"
 #include "RequestParser.hpp"
+#include "Metrics.hpp"
+#include "MemoryPool.hpp"
+template <typename T>
+class Metrics : public Counter<T>, public Timer<T>
+{
+};
+
 class Job
 {
 public:
     Job(client &cli_, const request &req_) : cli(cli_), req(req_) {}
+    virtual ~Job() = 0;
     virtual void work() = 0;
 
+    void *operator new(size_t size)
+    {
+        return mp.malloc(size);
+    }
+
+    void operator delete(void *, size_t size)
+    {
+
+    }
     client &cli;
     request req;
+    static MemoryPool mp;
 };
 
-class IO_bound_job : public Job
+MemoryPool Job::mp = MemoryPool(1024, true);
+
+Job::~Job() {}
+
+class IO_bound_job : public Job, public Metrics<IO_bound_job>
 {
 public:
     IO_bound_job(client &cli, const request &req) : Job(cli, req) {}
+    ~IO_bound_job() {}
     void work()
     {
         if (req.cmd.size() != 2)
@@ -47,10 +70,11 @@ public:
 private:
 };
 
-class CPU_bound_job : public Job
+class CPU_bound_job : public Job, public Metrics<CPU_bound_job>
 {
 public:
     CPU_bound_job(client &cli, const request &req) : Job(cli, req) {}
+    ~CPU_bound_job() {}
     void work()
     {
         if (req.cmd.size() != 2)
@@ -84,10 +108,11 @@ public:
     }
 };
 
-class Unknown_job : public Job
+class Unknown_job : public Job, public Metrics<Unknown_job>
 {
 public:
     Unknown_job(client &cli, const request &req) : Job(cli, req) {}
+    ~Unknown_job() {}
     void work()
     {
         cli.send("Unknown command\n");
@@ -97,21 +122,21 @@ public:
 class JobFactory
 {
 public:
-    static std::unique_ptr<Job> createJob(client &cli)
+    static Job* createJob(client &cli)
     {
         size_t read_out;
         request req = RequestParser::parse(cli.readln(&read_out));
         if (req.cmd[0] == "CPU")
         {
-            return std::make_unique<CPU_bound_job>(cli, req);
+            return new CPU_bound_job(cli, req);
         }
         else if (req.cmd[0] == "IO")
         {
-            return std::make_unique<IO_bound_job>(cli, req);
+            return new IO_bound_job(cli, req);
         }
         else
         {
-            return std::make_unique<Unknown_job>(cli, req);
+            return new Unknown_job(cli, req);
         }
     }
 };

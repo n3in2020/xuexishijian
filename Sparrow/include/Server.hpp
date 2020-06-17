@@ -50,7 +50,7 @@ void Server::setupListener()
     sin.sin_port = htons(port);
     sin.sin_addr.s_addr = INADDR_ANY;
     listener = evconnlistener_new_bind(base, accept_conn_cb, &q, LEV_OPT_CLOSE_ON_FREE & LEV_OPT_REUSEABLE, 5, (struct sockaddr *)&sin, sizeof(sin));
-    if(!listener)
+    if (!listener)
     {
         perror("when listen");
         exit(EXIT_FAILURE);
@@ -92,6 +92,7 @@ void read_cb(struct bufferevent *bev, void *ctx)
     client *cli = (client *)ctx;
     auto job = JobFactory::createJob(*cli);
     job->work();
+    delete (job);
 }
 void event_cb(struct bufferevent *bev, short what, void *ctx)
 {
