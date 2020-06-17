@@ -7,6 +7,7 @@
 #include "RequestParser.hpp"
 #include "Metrics.hpp"
 #include "MemoryPool.hpp"
+#include "LRUCache.hpp"
 template <typename T>
 class Metrics : public Counter<T>, public Timer<T>
 {
@@ -26,7 +27,6 @@ public:
 
     void operator delete(void *, size_t size)
     {
-
     }
     client &cli;
     request req;
@@ -66,8 +66,6 @@ public:
             cli.send("Cannot open file " + req.cmd[1] + ": " + strerror(errno));
         }
     }
-
-private:
 };
 
 class CPU_bound_job : public Job, public Metrics<CPU_bound_job>
@@ -89,7 +87,17 @@ public:
         }
         else
         {
-            cli.send(std::to_string(func(n)));
+            auto value = cache.get(n);
+            if (value.get() == nullptr)
+            {
+                std::string res = std::to_string(func(n));
+                cli.send(res);
+                cache.put(n, res);
+            }
+            else
+            {
+                cli.send(*value);
+            }
         }
     }
 
@@ -106,7 +114,11 @@ public:
             return func(n - 1) + func(n - 2);
         }
     }
+
+private:
+    static LRUCache<int, std::string> cache;
 };
+LRUCache<int, std::string> CPU_bound_job::cache(4);
 
 class Unknown_job : public Job, public Metrics<Unknown_job>
 {
@@ -122,7 +134,7 @@ public:
 class JobFactory
 {
 public:
-    static Job* createJob(client &cli)
+    static Job *createJob(client &cli)
     {
         size_t read_out;
         request req = RequestParser::parse(cli.readln(&read_out));
