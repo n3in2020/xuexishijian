@@ -9,7 +9,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
+#include <glog/logging.h>
 struct client_info
 {
     int id;
@@ -36,7 +36,10 @@ struct client
     client& operator=(const client&) = delete;
     ~client()
     {
-        printf("[id] %d, [IP]: %s, [in_bytes] %d, [out_bytes] %d\n", info.id, info.IP_address.c_str(), info.in_bytes, info.out_bytes);
+        char msg[1024];
+        snprintf(msg, 1024, "[client id=%d disconnected]: [IP]: %s, [in_bytes] %d, [out_bytes] %d\n", info.id, info.IP_address.c_str(), info.in_bytes, info.out_bytes);
+        printf(msg);
+        LOG(INFO) << msg;
     }
     void setBuffers(bufferevent *bev)
     {

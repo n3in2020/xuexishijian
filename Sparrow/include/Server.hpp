@@ -6,11 +6,11 @@
 #include <event2/event.h>
 #include <event2/listener.h>
 #include <event2/bufferevent.h>
+#include <glog/logging.h>
 #include "Threadsafe_Queue.hpp"
 #include "Threadpool.hpp"
 #include "Client.hpp"
 #include "JobFactory.hpp"
-
 void accept_conn_cb(struct evconnlistener *, evutil_socket_t, struct sockaddr *, int socklen, void *);
 void read_cb(struct bufferevent *bev, void *ctx);
 void event_cb(struct bufferevent *bev, short what, void *ctx);
@@ -52,8 +52,7 @@ void Server::setupListener()
     listener = evconnlistener_new_bind(base, accept_conn_cb, &q, LEV_OPT_CLOSE_ON_FREE & LEV_OPT_REUSEABLE, 5, (struct sockaddr *)&sin, sizeof(sin));
     if (!listener)
     {
-        perror("when listen");
-        exit(EXIT_FAILURE);
+        LOG(ERROR) << "when setup listener: " << strerror(errno);
     }
 }
 
@@ -71,14 +70,23 @@ void Server::run()
                 bufferevent *bev = bufferevent_socket_new(base, fd, BEV_OPT_CLOSE_ON_FREE);
                 cli.setBuffers(bev);
                 bufferevent_setcb(bev, read_cb, NULL, event_cb, &cli);
-                bufferevent_enable(bev, EV_READ | EV_WRITE);
-                event_base_dispatch(base);
+                if (bufferevent_enable(bev, EV_READ | EV_WRITE) == -1)
+                {
+                    LOG(ERROR) << "bufferevent_enable: " << strerror(errno);
+                }
+                if (event_base_dispatch(base) == -1)
+                {
+                    LOG(ERROR) << "event_base_dispatch: " << strerror(errno);
+                }
                 bufferevent_free(bev);
             }
             event_base_free(base);
         });
     }
-    event_base_dispatch(base);
+    if (event_base_dispatch(base) == -1)
+    {
+        LOG(ERROR) << "event_base_dispatch: " << strerror(errno);
+    }
 }
 
 void accept_conn_cb(struct evconnlistener *listener, evutil_socket_t fd, struct sockaddr *sin, int socklen, void *arg)

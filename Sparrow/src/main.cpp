@@ -1,6 +1,6 @@
 #include "Server.hpp"
 
-void usage(const char * pName)
+void usage(const char *pName)
 {
     printf("%s [port default=50000]\n", pName);
     exit(1);
@@ -8,12 +8,13 @@ void usage(const char * pName)
 
 int main(int argc, char *argv[])
 {
+    google::InitGoogleLogging(argv[0]);
     short port = 50000;
-    if(argc>2)
+    if (argc > 2)
     {
         usage(argv[0]);
-    }    
-    else if(argc==2)
+    }
+    else if (argc == 2)
     {
         port = atoi(argv[1]);
     }
