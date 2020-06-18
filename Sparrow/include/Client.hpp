@@ -38,7 +38,6 @@ struct client
     {
         char msg[1024];
         snprintf(msg, 1024, "[client id=%d disconnected]: [IP]: %s, [in_bytes] %d, [out_bytes] %d\n", info.id, info.IP_address.c_str(), info.in_bytes, info.out_bytes);
-        printf(msg);
         LOG(INFO) << msg;
     }
     void setBuffers(bufferevent *bev)
