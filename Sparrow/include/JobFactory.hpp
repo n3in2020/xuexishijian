@@ -8,15 +8,10 @@
 #include "Metrics.hpp"
 #include "MemoryPool.hpp"
 #include "LRUCache.hpp"
-template <typename T>
-class Metrics : public Counter<T>, public Timer<T>
-{
-};
-
 class Job
 {
 public:
-    Job(client &cli_, const request &req_) : cli(cli_), req(req_) {}
+    Job(client &cli_, const request &req_, const std::string &metric_name = "JOB") : cli(cli_), req(req_), metric{Metrics::GetInstance()->GetMetric(metric_name)} {}
     virtual ~Job() = 0;
     virtual void work() = 0;
 
@@ -31,16 +26,17 @@ public:
     client &cli;
     request req;
     static MemoryPool mp;
+    ScopedMetric metric;
 };
 
 MemoryPool Job::mp = MemoryPool(1024, true);
 
 Job::~Job() {}
 
-class IO_bound_job : public Job, public Metrics<IO_bound_job>
+class IO_bound_job : public Job
 {
 public:
-    IO_bound_job(client &cli, const request &req) : Job(cli, req) {}
+    IO_bound_job(client &cli, const request &req) : Job(cli, req, "IO_BOUND_JOB") {}
     ~IO_bound_job() {}
     void work()
     {
@@ -68,10 +64,10 @@ public:
     }
 };
 
-class CPU_bound_job : public Job, public Metrics<CPU_bound_job>
+class CPU_bound_job : public Job
 {
 public:
-    CPU_bound_job(client &cli, const request &req) : Job(cli, req) {}
+    CPU_bound_job(client &cli, const request &req) : Job(cli, req, "CPU_BOUND_JOB") {}
     ~CPU_bound_job() {}
     void work()
     {
@@ -120,10 +116,10 @@ private:
 };
 LRUCache<int, std::string> CPU_bound_job::cache(4);
 
-class Unknown_job : public Job, public Metrics<Unknown_job>
+class Unknown_job : public Job
 {
 public:
-    Unknown_job(client &cli, const request &req) : Job(cli, req) {}
+    Unknown_job(client &cli, const request &req) : Job(cli, req, "UNKNOWN_JOB") {}
     ~Unknown_job() {}
     void work()
     {
